@@ -30,6 +30,7 @@ from keras import layers as layers_module
 from keras import losses
 from keras import metrics as metrics_module
 from keras.callbacks import Callback
+from keras.datasets import imdb
 from keras.engine import input_layer
 from keras.engine import sequential
 from keras.engine import training as training_module
@@ -58,6 +59,110 @@ try:
     import scipy.sparse as scipy_sparse
 except ImportError:
     scipy_sparse = None
+
+embed_dim = 32  # Embedding size for each token
+num_heads = 2  # Number of attention heads
+vocab_size = 20000
+maxlen = 600
+ff_dim = 32  # Hidden layer size in feed forward network inside transformer
+
+
+class RaggedTokenAndPositionEmbedding(layers_module.Layer):
+    def __init__(self, maxlen, vocab_size, embed_dim):
+        super().__init__()
+        self.token_emb = layers_module.Embedding(
+            input_dim=vocab_size, output_dim=embed_dim
+        )
+        self.pos_emb = layers_module.Embedding(
+            input_dim=maxlen, output_dim=embed_dim
+        )
+        self.maxlen = maxlen
+        self.embed_dim = embed_dim
+        self.vocab_size = vocab_size
+
+    def call(self, x):
+        positions = tf.range(start=0, limit=self.maxlen, delta=1)
+        positions = self.pos_emb(positions)
+        x = self.token_emb(x)
+        positions = tf.range(start=0, limit=self.maxlen, delta=1)
+        positions = self.pos_emb(positions)
+        if isinstance(x, tf.RaggedTensor):
+            x_shape = x.shape.as_list()
+            x_shape[1] = self.maxlen
+            lengths = x.nested_row_lengths()
+            x = x.to_tensor(shape=x_shape)
+            x = x + positions
+            x = tf.RaggedTensor.from_tensor(x, lengths=lengths[0])
+        else:
+            x = x + positions
+        return x
+
+    def get_config(self):
+        return {
+            "maxlen": self.maxlen,
+            "vocab_size": self.vocab_size,
+            "embed_dim": self.embed_dim,
+        }
+
+
+class RaggedTransformerBlock(layers_module.Layer):
+    def __init__(self, embed_dim, num_heads, ff_dim, rate=0.1):
+        super().__init__()
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.ff_dim = ff_dim
+        self.rate = rate
+        self.att = layers_module.MultiHeadAttention(
+            num_heads=num_heads, key_dim=embed_dim
+        )
+        self.ffn = keras.Sequential(
+            [
+                layers_module.Dense(ff_dim, activation="relu"),
+                layers_module.Dense(embed_dim),
+            ]
+        )
+        self.layernorm1 = layers_module.LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = layers_module.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = layers_module.Dropout(rate)
+        self.dropout2 = layers_module.Dropout(rate)
+
+    def call(self, inputs, training):
+        attn_output = self.att(inputs, inputs)
+        attn_output = self.dropout1(attn_output, training=training)
+        out1 = self.layernorm1(inputs + attn_output)
+        ffn_output = self.ffn(out1)
+        ffn_output = self.dropout2(ffn_output, training=training)
+        return self.layernorm2(out1 + ffn_output)
+
+    def get_config(self):
+        return {
+            "embed_dim": self.embed_dim,
+            "num_heads": self.num_heads,
+            "ff_dim": self.ff_dim,
+            "rate": self.rate,
+        }
+
+
+def build_model():
+    inputs = layers_module.Input(shape=(maxlen,))
+    embedding_layer = RaggedTokenAndPositionEmbedding(
+        maxlen, vocab_size, embed_dim
+    )
+    x = embedding_layer(inputs)
+    transformer_block = RaggedTransformerBlock(embed_dim, num_heads, ff_dim)
+    x = transformer_block(x)
+    x = layers_module.GlobalAveragePooling1D()(x)
+    outputs = layers_module.Dense(1, activation="sigmoid")(x)
+
+    model = keras.Model(inputs=inputs, outputs=outputs)
+    return model
+
+
+def get_dataset():
+    (x, y), (x_val, y_val) = imdb.load_data(num_words=vocab_size)
+    x = tf.ragged.constant(x)
+    y = tf.ragged.constant(y, dtype=tf.float32)
+    return x[:100], y[:100]
 
 
 class TrainingTest(test_combinations.TestCase):
@@ -88,6 +193,19 @@ class TrainingTest(test_combinations.TestCase):
         model.compile("sgd", "mse", run_eagerly=test_utils.should_run_eagerly())
         hist = model.fit(x=np.array([0.0]), y=np.array([0.0]))
         self.assertAllClose(hist.history["loss"][0], 10000)
+
+    @test_combinations.run_all_keras_modes(always_skip_v1=True)
+    def test_ragged_transformer(self):
+        model = build_model()
+        loss_fn = keras.losses.CategoricalCrossentropy()
+        model.compile(
+            optimizer="adam",
+            # loss="categorical_crossentropy",
+            loss=loss_fn,
+            metrics=["accuracy"],
+        )
+        x, y = get_dataset()
+        model.fit(x, y, batch_size=32, epochs=2)
 
     @test_combinations.run_all_keras_modes(always_skip_v1=True)
     def test_fit_on_empty(self):

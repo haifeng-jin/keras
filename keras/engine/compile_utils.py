@@ -260,7 +260,11 @@ class LossesContainer(Container):
             ):  # Ok to have no loss for an output.
                 continue
 
+            loss_fn = losses_mod.CategoricalCrossentropy()
+            tf.print("in call 4", loss_fn(y_t, y_p))
             y_t, y_p, sw = match_dtype_and_rank(y_t, y_p, sw)
+            loss_fn = losses_mod.CategoricalCrossentropy()
+            tf.print("in call 5", loss_fn(y_t, y_p))
             sw = losses_utils.apply_mask(y_p, sw, losses_utils.get_mask(y_p))
             loss_value = loss_obj(y_t, y_p, sample_weight=sw)
 
