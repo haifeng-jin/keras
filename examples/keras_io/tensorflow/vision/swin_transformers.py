@@ -30,7 +30,7 @@ This example requires TensorFlow 2.5 or higher.
 
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # For tf.data and preprocessing only.
 import keras
 from keras import layers
 from keras import ops
