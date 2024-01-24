@@ -226,7 +226,6 @@ def get_augmenter(min_area, brightness, jitter):
     zoom_factor = 1.0 - math.sqrt(min_area)
     return keras.Sequential(
         [
-            keras.Input(shape=(image_size, image_size, image_channels)),
             layers.Rescaling(1 / 255, dtype="uint8"),
             layers.RandomFlip("horizontal"),
             layers.RandomTranslation(zoom_factor / 2, zoom_factor / 2),
@@ -275,7 +274,6 @@ visualize_augmentations(num_images=8)
 def get_encoder():
     return keras.Sequential(
         [
-            keras.Input(shape=(image_size, image_size, image_channels)),
             layers.Conv2D(width, kernel_size=3, strides=2, activation="relu"),
             layers.Conv2D(width, kernel_size=3, strides=2, activation="relu"),
             layers.Conv2D(width, kernel_size=3, strides=2, activation="relu"),
@@ -296,7 +294,6 @@ A baseline supervised model is trained using random initialization.
 # Baseline supervised training with random initialization
 baseline_model = keras.Sequential(
     [
-        keras.Input(shape=(image_size, image_size, image_channels)),
         get_augmenter(**classification_augmentation),
         get_encoder(),
         layers.Dense(10),
@@ -376,7 +373,6 @@ class ContrastiveModel(keras.Model):
         # Non-linear MLP as projection head
         self.projection_head = keras.Sequential(
             [
-                keras.Input(shape=(width,)),
                 layers.Dense(width, activation="relu"),
                 layers.Dense(width),
             ],
@@ -547,7 +543,6 @@ a single randomly initalized fully connected classification layer on its top.
 # Supervised finetuning of the pretrained encoder
 finetuning_model = keras.Sequential(
     [
-        layers.Input(shape=(image_size, image_size, image_channels)),
         get_augmenter(**classification_augmentation),
         pretraining_model.encoder,
         layers.Dense(10),
