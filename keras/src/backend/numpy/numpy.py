@@ -315,6 +315,16 @@ def hamming(x):
     return np.hamming(x).astype(config.floatx())
 
 
+def hanning(x):
+    x = convert_to_tensor(x)
+    return np.hanning(x).astype(config.floatx())
+
+
+def kaiser(x, beta):
+    x = convert_to_tensor(x)
+    return np.kaiser(x, beta).astype(config.floatx())
+
+
 def bincount(x, weights=None, minlength=0, sparse=False):
     if sparse:
         raise ValueError("Unsupported value `sparse=True` with numpy backend")
