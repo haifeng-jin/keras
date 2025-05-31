@@ -11,6 +11,8 @@ NumpyDtypeTest::test_array
 NumpyDtypeTest::test_bartlett
 NumpyDtypeTest::test_blackman
 NumpyDtypeTest::test_hamming
+NumpyDtypeTest::test_hanning
+NumpyDtypeTest::test_kaiser
 NumpyDtypeTest::test_bitwise
 NumpyDtypeTest::test_ceil
 NumpyDtypeTest::test_concatenate
@@ -38,9 +40,7 @@ NumpyDtypeTest::test_mean
 NumpyDtypeTest::test_median
 NumpyDtypeTest::test_meshgrid
 NumpyDtypeTest::test_minimum_python_types
-NumpyDtypeTest::test_moveaxis
 NumpyDtypeTest::test_multiply
-NumpyDtypeTest::test_outer_
 NumpyDtypeTest::test_power
 NumpyDtypeTest::test_prod
 NumpyDtypeTest::test_quantile
@@ -50,9 +50,7 @@ NumpyDtypeTest::test_round
 NumpyDtypeTest::test_searchsorted
 NumpyDtypeTest::test_signbit
 NumpyDtypeTest::test_sort
-NumpyDtypeTest::test_split
 NumpyDtypeTest::test_sqrt
-NumpyDtypeTest::test_stack_
 NumpyDtypeTest::test_std
 NumpyDtypeTest::test_subtract
 NumpyDtypeTest::test_sum
@@ -79,6 +77,8 @@ NumpyOneInputOpsCorrectnessTest::test_array
 NumpyOneInputOpsCorrectnessTest::test_bartlett
 NumpyOneInputOpsCorrectnessTest::test_blackman
 NumpyOneInputOpsCorrectnessTest::test_hamming
+NumpyOneInputOpsCorrectnessTest::test_hanning
+NumpyOneInputOpsCorrectnessTest::test_kaiser
 NumpyOneInputOpsCorrectnessTest::test_bitwise_invert
 NumpyOneInputOpsCorrectnessTest::test_conj
 NumpyOneInputOpsCorrectnessTest::test_correlate
@@ -96,7 +96,6 @@ NumpyOneInputOpsCorrectnessTest::test_max
 NumpyOneInputOpsCorrectnessTest::test_mean
 NumpyOneInputOpsCorrectnessTest::test_median
 NumpyOneInputOpsCorrectnessTest::test_meshgrid
-NumpyOneInputOpsCorrectnessTest::test_moveaxis
 NumpyOneInputOpsCorrectnessTest::test_pad_float16_constant_2
 NumpyOneInputOpsCorrectnessTest::test_pad_float32_constant_2
 NumpyOneInputOpsCorrectnessTest::test_pad_float64_constant_2
@@ -106,7 +105,6 @@ NumpyOneInputOpsCorrectnessTest::test_pad_uint8_constant_2
 NumpyOneInputOpsCorrectnessTest::test_pad_int32_constant_2
 NumpyOneInputOpsCorrectnessTest::test_prod
 NumpyOneInputOpsCorrectnessTest::test_real
-NumpyOneInputOpsCorrectnessTest::test_reciprocal
 NumpyOneInputOpsCorrectnessTest::test_repeat
 NumpyOneInputOpsCorrectnessTest::test_reshape
 NumpyOneInputOpsCorrectnessTest::test_roll
@@ -117,7 +115,6 @@ NumpyOneInputOpsCorrectnessTest::test_signbit
 NumpyOneInputOpsCorrectnessTest::test_size
 NumpyOneInputOpsCorrectnessTest::test_slogdet
 NumpyOneInputOpsCorrectnessTest::test_sort
-NumpyOneInputOpsCorrectnessTest::test_split
 NumpyOneInputOpsCorrectnessTest::test_sqrt_int32
 NumpyOneInputOpsCorrectnessTest::test_squeeze
 NumpyOneInputOpsCorrectnessTest::test_std
@@ -146,7 +143,6 @@ NumpyTwoInputOpsCorrectnessTest::test_einsum
 NumpyTwoInputOpsCorrectnessTest::test_inner
 NumpyTwoInputOpsCorrectnessTest::test_linspace
 NumpyTwoInputOpsCorrectnessTest::test_logspace
-NumpyTwoInputOpsCorrectnessTest::test_outer
 NumpyTwoInputOpsCorrectnessTest::test_quantile
 NumpyTwoInputOpsCorrectnessTest::test_take_along_axis
 NumpyTwoInputOpsCorrectnessTest::test_tensordot
@@ -156,4 +152,6 @@ NumpyOneInputOpsDynamicShapeTest::test_angle
 NumpyOneInputOpsDynamicShapeTest::test_bartlett
 NumpyOneInputOpsDynamicShapeTest::test_blackman
 NumpyOneInputOpsDynamicShapeTest::test_hamming
+NumpyOneInputOpsDynamicShapeTest::test_hanning
+NumpyOneInputOpsDynamicShapeTest::test_kaiser
 NumpyOneInputOpsStaticShapeTest::test_angle
