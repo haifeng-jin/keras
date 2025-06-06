@@ -1207,7 +1207,7 @@ def average(x, axis=None, weights=None):
     """
     if any_symbolic_tensors((x,)):
         return Average(axis=axis).symbolic_call(x, weights=weights)
-    return backend.numpy.average(x, weights=weights, axis=axis)
+    return backend.numpy.average(x, axis=axis, weights=weights)
 
 
 class Bartlett(Operation):
@@ -1268,6 +1268,75 @@ def hamming(x):
     if any_symbolic_tensors((x,)):
         return Hamming().symbolic_call(x)
     return backend.numpy.hamming(x)
+
+
+class Hanning(Operation):
+    def call(self, x):
+        return backend.numpy.hanning(x)
+
+    def compute_output_spec(self, x):
+        return KerasTensor(x.shape, dtype=backend.floatx())
+
+
+@keras_export(["keras.ops.hanning", "keras.ops.numpy.hanning"])
+def hanning(x):
+    """Hanning window function.
+
+    The Hanning window is defined as:
+    `w[n] = 0.5 - 0.5 * cos(2 * pi * n / (N - 1))` for `0 <= n <= N - 1`.
+
+    Args:
+        x: Scalar or 1D Tensor. The window length.
+
+    Returns:
+        A 1D tensor containing the Hanning window values.
+
+    Example:
+    >>> x = keras.ops.convert_to_tensor(5)
+    >>> keras.ops.hanning(x)
+    array([0. , 0.5, 1. , 0.5, 0. ], dtype=float32)
+    """
+    if any_symbolic_tensors((x,)):
+        return Hanning().symbolic_call(x)
+    return backend.numpy.hanning(x)
+
+
+class Kaiser(Operation):
+    def __init__(self, beta):
+        super().__init__()
+        self.beta = beta
+
+    def call(self, x):
+        return backend.numpy.kaiser(x, self.beta)
+
+    def compute_output_spec(self, x):
+        return KerasTensor(x.shape, dtype=backend.floatx())
+
+
+@keras_export(["keras.ops.kaiser", "keras.ops.numpy.kaiser"])
+def kaiser(x, beta):
+    """Kaiser window function.
+
+    The Kaiser window is defined as:
+    `w[n] = I0(beta * sqrt(1 - (2n / (N - 1) - 1)^2)) / I0(beta)`
+    where I0 is the modified zeroth-order Bessel function of the first kind.
+
+    Args:
+        x: Scalar or 1D Tensor. The window length.
+        beta: Float. Shape parameter for the Kaiser window.
+
+    Returns:
+        A 1D tensor containing the Kaiser window values.
+
+    Example:
+    >>> x = keras.ops.convert_to_tensor(5)
+    >>> keras.ops.kaiser(x, beta=14.0)
+    array([7.7268669e-06, 1.6493219e-01, 1.0000000e+00, 1.6493219e-01,
+       7.7268669e-06], dtype=float32)
+    """
+    if any_symbolic_tensors((x,)):
+        return Kaiser(beta).symbolic_call(x)
+    return backend.numpy.kaiser(x, beta)
 
 
 class Bincount(Operation):
@@ -2592,8 +2661,8 @@ class Einsum(Operation):
         super().__init__()
         self.subscripts = subscripts
 
-    def call(self, *operands):
-        return backend.numpy.einsum(self.subscripts, *operands)
+    def call(self, *operands, **kwargs):
+        return backend.numpy.einsum(self.subscripts, *operands, **kwargs)
 
     def compute_output_spec(self, *operands):
         """Compute the output shape of `einsum`.
@@ -2767,7 +2836,7 @@ class Einsum(Operation):
 
 
 @keras_export(["keras.ops.einsum", "keras.ops.numpy.einsum"])
-def einsum(subscripts, *operands):
+def einsum(subscripts, *operands, **kwargs):
     """Evaluates the Einstein summation convention on the operands.
 
     Args:
@@ -2851,8 +2920,8 @@ def einsum(subscripts, *operands):
     array([ 30,  80, 130, 180, 230])
     """
     if any_symbolic_tensors(operands):
-        return Einsum(subscripts).symbolic_call(*operands)
-    return backend.numpy.einsum(subscripts, *operands)
+        return Einsum(subscripts).symbolic_call(*operands, **kwargs)
+    return backend.numpy.einsum(subscripts, *operands, **kwargs)
 
 
 class Empty(Operation):
@@ -3542,7 +3611,7 @@ def less_equal(x1, x2):
 
 class Linspace(Operation):
     def __init__(
-        self, num=50, endpoint=True, retstep=False, dtype=float, axis=0
+        self, num=50, endpoint=True, retstep=False, dtype=None, axis=0
     ):
         super().__init__()
         self.num = num
@@ -3888,7 +3957,7 @@ def logical_or(x1, x2):
 
 
 class Logspace(Operation):
-    def __init__(self, num=50, endpoint=True, base=10, dtype=float, axis=0):
+    def __init__(self, num=50, endpoint=True, base=10, dtype=None, axis=0):
         super().__init__()
         self.num = num
         self.endpoint = endpoint
@@ -4510,12 +4579,17 @@ def not_equal(x1, x2):
 
 
 class OnesLike(Operation):
-    def call(self, x, dtype=None):
-        return backend.numpy.ones_like(x, dtype=dtype)
+    def __init__(self, dtype=None):
+        super().__init__()
+        self.dtype = (
+            backend.standardize_dtype(dtype) if dtype is not None else None
+        )
 
-    def compute_output_spec(self, x, dtype=None):
-        if dtype is None:
-            dtype = x.dtype
+    def call(self, x):
+        return backend.numpy.ones_like(x, dtype=self.dtype)
+
+    def compute_output_spec(self, x):
+        dtype = x.dtype if self.dtype is None else self.dtype
         sparse = getattr(x, "sparse", False)
         return KerasTensor(x.shape, dtype=dtype, sparse=sparse)
 
@@ -4532,17 +4606,22 @@ def ones_like(x, dtype=None):
         A tensor of ones with the same shape and type as `x`.
     """
     if any_symbolic_tensors((x,)):
-        return OnesLike().symbolic_call(x, dtype=dtype)
+        return OnesLike(dtype=dtype).symbolic_call(x)
     return backend.numpy.ones_like(x, dtype=dtype)
 
 
 class ZerosLike(Operation):
-    def call(self, x, dtype=None):
-        return backend.numpy.zeros_like(x, dtype=dtype)
+    def __init__(self, dtype=None):
+        super().__init__()
+        self.dtype = (
+            backend.standardize_dtype(dtype) if dtype is not None else None
+        )
+
+    def call(self, x):
+        return backend.numpy.zeros_like(x, dtype=self.dtype)
 
     def compute_output_spec(self, x, dtype=None):
-        if dtype is None:
-            dtype = x.dtype
+        dtype = x.dtype if self.dtype is None else self.dtype
         sparse = getattr(x, "sparse", False)
         return KerasTensor(x.shape, dtype=dtype, sparse=sparse)
 
@@ -4564,7 +4643,7 @@ def zeros_like(x, dtype=None):
         A tensor of zeros with the same shape and type as `x`.
     """
     if any_symbolic_tensors((x,)):
-        return ZerosLike().symbolic_call(x, dtype=dtype)
+        return ZerosLike(dtype=dtype).symbolic_call(x)
     return backend.numpy.zeros_like(x, dtype=dtype)
 
 
@@ -5159,7 +5238,7 @@ class SearchSorted(Operation):
         return KerasTensor(values.shape, dtype=out_type)
 
 
-@keras_export(["keras.ops.searchsorted"])
+@keras_export(["keras.ops.searchsorted", "keras.ops.numpy.searchsorted"])
 def searchsorted(sorted_sequence, values, side="left"):
     """Perform a binary search, returning indices for insertion of `values`
     into `sorted_sequence` that maintain the sorting order.
@@ -5417,22 +5496,22 @@ class Stack(Operation):
         super().__init__()
         self.axis = axis
 
-    def call(self, xs):
-        return backend.numpy.stack(xs, axis=self.axis)
+    def call(self, x):
+        return backend.numpy.stack(x, axis=self.axis)
 
-    def compute_output_spec(self, xs):
-        first_shape = xs[0].shape
+    def compute_output_spec(self, x):
+        first_shape = x[0].shape
         dtypes_to_resolve = []
-        for x in xs:
-            if not shape_equal(x.shape, first_shape, axis=[], allow_none=True):
+        for a in x:
+            if not shape_equal(a.shape, first_shape, axis=[], allow_none=True):
                 raise ValueError(
-                    "Every value in `xs` must have the same shape. But found "
-                    f"element of shape {x.shape},  which is different from the "
+                    "Every value in `x` must have the same shape. But found "
+                    f"element of shape {a.shape},  which is different from the "
                     f"first element's shape {first_shape}."
                 )
-            dtypes_to_resolve.append(getattr(x, "dtype", type(x)))
+            dtypes_to_resolve.append(getattr(a, "dtype", type(a)))
 
-        size_on_axis = len(xs)
+        size_on_axis = len(x)
         output_shape = list(first_shape)
         if self.axis == -1:
             output_shape = output_shape + [size_on_axis]
